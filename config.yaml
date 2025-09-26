@@ -1,0 +1,39 @@
+models:
+  bank:
+    path: "data/models/bank_model.pkl"
+    threshold: 0.7
+    features: ["sentiment", "regulatory_mentions", "financial_metrics"]
+  insurance:
+    path: "data/models/insurance_model.pkl"
+    threshold: 0.65
+  fintech:
+    path: "data/models/fintech_model.pkl"
+    threshold: 0.6
+
+nlp:
+  transformer_model: "distilbert-base-uncased"
+  max_length: 512
+  risk_categories: ["regulatory", "financial", "operational", "reputational"]
+
+scraping:
+  timeout: 30
+  user_agent: "FinancialRiskRadar/1.0"
+  max_content_length: 1000000
+  allowed_domains: []  # Empty = allow all
+  blocked_domains: [
+    "localhost", "127.0.0.1", "internal", "intranet",
+    "bing.com", "google.com", "search"  # Add search engines to block if desired
+  ]
+
+xai:
+  shap_samples: 100
+  top_features: 10
+
+logging:
+  level: "INFO"
+
+scraping:
+  timeout: 30
+  user_agent: "FinancialRiskRadar/1.0"
+  max_content_length: 1000000
+  
