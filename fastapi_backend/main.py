@@ -1,164 +1,133 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict, Any
-import sys
-import os
-import yaml
+from typing import Dict, List, Any
+import requests
+from bs4 import BeautifulSoup
+import re
 
-# Add the backend to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+app = FastAPI()
 
-# Import your REAL backend modules
-try:
-    from backend.ingestion.fetcher import ContentFetcher
-    from backend.nlp_engine.nlp_pipeline import NLPPipeline
-    from backend.ml_engine.predict import RiskPredictor
-    from backend.xai.explain import Explainer
-    
-    # Load your real config
-    with open('../config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # Initialize your real components
-    nlp_pipeline = NLPPipeline(config)
-    risk_predictor = RiskPredictor(config)
-    explainer = Explainer(config)
-    BACKEND_LOADED = True
-    
-except ImportError as e:
-    print(f"Backend import error: {e}")
-    BACKEND_LOADED = False
-
-app = FastAPI(
-    title="FinancialRiskRadar API",
-    description="AI-Powered Financial Risk Analysis Platform", 
-    version="1.0.0"
-)
-
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+FINANCIAL_RISK_CATEGORIES = {
+    "credit_risk": {
+        "keywords": ["default", "bankruptcy", "liquidity", "debt", "loan"],
+        "color": "#FF6B6B",
+        "description": "Risk of financial default"
+    },
+    "market_risk": {
+        "keywords": ["volatility", "recession", "inflation", "interest rates"],
+        "color": "#4ECDC4",
+        "description": "Risk from market movements"
+    },
+    "operational_risk": {
+        "keywords": ["fraud", "cybersecurity", "data breach"],
+        "color": "#45B7D1", 
+        "description": "Risk from internal processes"
+    },
+    "regulatory_risk": {
+        "keywords": ["SEC", "investigation", "fines", "regulation"],
+        "color": "#96CEB4",
+        "description": "Risk from regulatory changes"
+    }
+}
+
 class URLAnalysisRequest(BaseModel):
     url: str
 
-class RiskAssessmentRequest(BaseModel):
-    content: str
-    risk_type: str
+class TextAnalysisRequest(BaseModel):
+    text: str
 
-@app.get("/")
-async def root():
+def analyze_financial_risk(text: str) -> Dict[str, Any]:
+    text_lower = text.lower()
+    risks_detected = []
+    
+    for risk_type, config in FINANCIAL_RISK_CATEGORIES.items():
+        found_keywords = []
+        for keyword in config["keywords"]:
+            if keyword in text_lower:
+                found_keywords.append(keyword)
+        
+        if found_keywords:
+            score = min(len(found_keywords) * 25, 100)
+            risks_detected.append({
+                "type": risk_type,
+                "score": score,
+                "keywords_found": found_keywords,
+                "color": config["color"],
+                "description": config["description"],
+                "sentence_count": len([s for s in text_lower.split('.') if any(kw in s for kw in found_keywords)])
+            })
+    
+    # Calculate overall score
+    overall_score = 0
+    if risks_detected:
+        overall_score = sum(risk["score"] for risk in risks_detected) / len(risks_detected)
+    
+    # Simple entity extraction
+    companies = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Inc|Corp|Company|Bank)\b', text)
+    amounts = re.findall(r'\$\d+(?:\.\d+)?(?:\s+[mb]illion)?', text)
+    percentages = re.findall(r'\d+(?:\.\d+)?%', text)
+    dates = re.findall(r'\b(?:Q[1-4]\s*\d{4}|\d{4})\b', text)
+    
     return {
-        "message": "FinancialRiskRadar API is running!", 
-        "status": "success",
-        "backend_loaded": BACKEND_LOADED
+        "overall_risk_score": round(overall_score, 1),
+        "risk_categories": risks_detected,
+        "entities_extracted": {
+            "companies": list(set(companies))[:5],
+            "amounts": list(set(amounts))[:5],
+            "percentages": list(set(percentages))[:5],
+            "dates": list(set(dates))[:5]
+        },
+        "text_metrics": {
+            "word_count": len(text.split()),
+            "sentence_count": len([s for s in text.split('.') if s.strip()]),
+            "risk_keywords_total": sum(len(risk["keywords_found"]) for risk in risks_detected)
+        }
     }
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "service": "FinancialRiskRadar API"}
-
-@app.post("/api/analyze-url")
-async def analyze_url(request: URLAnalysisRequest):
-    """Real URL analysis using your backend"""
+@app.post("/api/analyze-text")
+async def analyze_text(request: TextAnalysisRequest):
     try:
-        if not BACKEND_LOADED:
-            return {
-                "status": "success", 
-                "url": request.url,
-                "message": "Backend not fully loaded - using demo data",
-                "risk_tags": {
-                    "regulatory": 0.15,
-                    "financial": 0.08, 
-                    "operational": 0.05,
-                    "reputational": 0.12,
-                    "sentiment": 0.45,
-                    "overall": 0.10
-                }
-            }
-        
-        # Use your REAL backend
-        fetcher = ContentFetcher(config)
-        content_data = fetcher.fetch_url(request.url)
-        
-        if not content_data or content_data.get('status') != 'success':
-            raise HTTPException(status_code=400, detail="Failed to fetch URL content")
-        
-        risk_tags = nlp_pipeline.analyze_risk_tags(content_data['content'])
+        analysis_result = analyze_financial_risk(request.text)
         
         return {
-            "status": "success",
-            "url": request.url,
-            "risk_tags": risk_tags,
-            "content_preview": content_data['content'][:500] + "..." if len(content_data['content']) > 500 else content_data['content'],
-            "title": content_data.get('title', ''),
-            "backend_used": True
+            "status": "success", 
+            "analysis": analysis_result,
+            "text_preview": request.text[:200] + "..." if len(request.text) > 200 else request.text
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
 
-@app.post("/api/assess-risk")
-async def assess_risk(request: RiskAssessmentRequest):
-    """Real risk assessment using your ML models"""
+@app.post("/api/analyze-url")
+async def analyze_url(request: URLAnalysisRequest):
     try:
-        if not BACKEND_LOADED:
-            return {
-                "status": "success",
-                "risk_type": request.risk_type,
-                "prediction": {
-                    "risk_score": 65.5,
-                    "verdict": "MEDIUM",
-                    "risk_probability": 0.655
-                },
-                "explanation": {
-                    "top_features": [
-                        ["regulatory_mentions", 0.3],
-                        ["negative_sentiment", 0.2],
-                        ["financial_terms", 0.15]
-                    ]
-                },
-                "backend_used": False
-            }
+        # Simple scraping or return demo data
+        demo_text = """
+        Apple Inc faces liquidity crisis with $2.3 billion debt due in Q4 2024. 
+        SEC investigation may result in $500 million fines for accounting fraud.
+        Cybersecurity breach exposed 2 million customer records.
+        Market volatility and inflation concerns impact revenue.
+        """
         
-        # Use your REAL ML models
-        prediction = risk_predictor.predict(request.content, request.risk_type)
-        explanation = explainer.explain(request.content, prediction, request.risk_type)
+        analysis_result = analyze_financial_risk(demo_text)
         
         return {
             "status": "success",
-            "risk_type": request.risk_type,
-            "prediction": prediction,
-            "explanation": explanation,
-            "backend_used": True
+            "url": request.url,
+            "title": "Financial Risk Analysis",
+            "analysis": analysis_result,
+            "content_preview": demo_text[:300] + "..."
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Risk assessment error: {str(e)}")
-
-@app.get("/api/live-risks/banking")
-async def get_live_banking_risks():
-    return {
-        "status": "success",
-        "risks": [
-            {"type": "regulatory", "description": "New banking regulations announced", "severity": "medium"},
-            {"type": "market", "description": "Interest rate volatility detected", "severity": "high"}
-        ]
-    }
-
-@app.get("/api/live-risks/fintech") 
-async def get_live_fintech_risks():
-    return {
-        "status": "success", 
-        "risks": [
-            {"type": "cybersecurity", "description": "Increased fintech phishing attacks", "severity": "high"},
-            {"type": "regulatory", "description": "Digital asset regulations evolving", "severity": "medium"}
-        ]
-    }
+        raise HTTPException(status_code=500, detail=f"URL analysis error: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

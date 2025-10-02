@@ -145,3 +145,120 @@
   font-weight: bold;
   font-size: 1.2rem;
 }
+
+/* Add to your existing App.css */
+.no-risks {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: center;
+  color: #856404;
+}
+
+.analysis-note {
+  background: #d1ecf1;
+  border: 1px solid #bee5eb;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+  color: #0c5460;
+  font-size: 0.9em;
+}
+
+.debug-section {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+.debug-section summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #6c757d;
+}
+
+.debug-section pre {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.8em;
+  margin-top: 10px;
+}
+
+/* Fix entity item text color */
+.entity-item {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  margin: 5px 0;
+  border-radius: 6px;
+  border-left: 3px solid #4ECDC4;
+  font-size: 0.9em;
+  color: #000000; /* FORCE BLACK TEXT */
+  font-weight: 500;
+}
+
+/* Fix no-entities text color */
+.no-entities {
+  color: #000000; /* FORCE BLACK TEXT */
+  font-style: italic;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+/* Fix risk category text */
+.risk-category-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin: 10px 0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  color: #000000; /* FORCE BLACK TEXT */
+}
+
+.risk-description {
+  color: #000000; /* FORCE BLACK TEXT */
+  font-size: 0.9em;
+  margin-bottom: 15px;
+}
+
+/* Fix keyword tags */
+.keyword-tag {
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  color: #000000; /* FORCE BLACK TEXT */
+  border: 1px solid #ddd;
+}
+
+/* Fix debug section */
+.debug-section pre {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.8em;
+  margin-top: 10px;
+  color: #000000; /* FORCE BLACK TEXT */
+  border: 1px solid #000;
+}
+
+/* Make all text black in results */
+.results-section {
+  color: #000000;
+}
+
+.results-section h2,
+.results-section h3,
+.results-section h4 {
+  color: #000000;
+}
+
+.results-section p {
+  color: #000000;
+}
