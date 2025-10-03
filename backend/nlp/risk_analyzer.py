@@ -95,7 +95,7 @@ class FinancialRiskAnalyzer:
             
             if risk_instances:
                 avg_intensity = total_intensity / len(risk_instances)
-                risk_score = min(avg_intensity, 95)  # Cap at 95%
+                risk_score = self._calculate_real_risk_score(risk_instances, risk_type)  # Cap at 95%
                 
                 detected_risks.append({
                     "type": risk_type,
@@ -123,3 +123,21 @@ class FinancialRiskAnalyzer:
             total_weight += weight
         
         return round(total_weighted_score / total_weight, 1) if total_weight > 0 else 0
+    
+    def _calculate_real_risk_score(self, risk_instances, risk_type):
+        """Calculate actual risk score based on evidence"""
+        if not risk_instances:
+            return 0
+    
+    # Factor 1: Number of instances
+        instance_score = min(len(risk_instances) * 15, 60)
+    
+    # Factor 2: Average intensity
+        avg_intensity = sum(inst["intensity"] for inst in risk_instances) / len(risk_instances)
+        intensity_score = avg_intensity * 0.4
+    
+    # Factor 3: Financial impact presence
+        financial_impact = any(inst["financial_impact"] for inst in risk_instances)
+        financial_score = 20 if financial_impact else 0
+    
+        return min(instance_score + intensity_score + financial_score, 95)
